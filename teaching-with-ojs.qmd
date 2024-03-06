@@ -1,0 +1,179 @@
+---
+title: "Fun with OJS"
+---
+
+# What exactly is ObservableJS
+
+Quarto supports working with multiple programming languages such as R, Python and also ObservableJS. ObservableJS is quite new and might be a bit foreign to R enthusiasts (it ~was~ is for me atleast).
+First let's talk about what we can create with ObservableJS. 
+
+ObservableJS is simply put Javascript with a couple of additions. Inside Quarto we have access to several more components including:
+
+1. Observable stdlib — Core primitives for DOM manipulation, file handling, importing code, and much more.
+2. Observable Inputs — Standard inputs controls including sliders, drop-downs, tables, check-boxes, etc.
+3. Observable Plot — High level plotting library for exploratory data visualization.
+
+Let's start with a simple explanation of how to make a scatterplot with Observable and ObservablePlot.
+
+```{r}
+#| message: false
+#| warnings: false
+library(palmerpenguins)
+library(tidyverse)
+head(penguins)
+```
+
+And now if we want to push data from R to ObservableJS we can,
+
+
+```{r}
+ojs_define(penguins = penguins |> purrr::transpose())
+```
+
+Why the `purrr::transpose()`? Well R stores dataframe as a list of columns in a data frame while Javascript (or ObservableJS) expects an Array of objects.
+
+```{ojs}
+Plot.plot({
+  marks: [
+      Plot.dot(penguins,
+         {x: "flipper_length_mm",
+          y: "body_mass_g",
+          fill: "species",
+          symbol: "species",
+          opacity: 0.7,
+          r: 4
+          })
+      ],
+  symbol: {legend: true},
+  facet: {data: penguins, x: "island"},
+  color: {
+    type: "categorical",
+    scheme: "Set1"
+  },
+  x: {label: "Flipper length (mm)"},
+  y: {label: "Body mass (g)"},
+  grid: true
+})
+```
+
+For more information about the similarities between ggplot and ObservablePlot go [here](https://observablehq.com/@observablehq/plot-from-ggplot2)
+
+But we can create this in ggplot as well I hear you say, what can ObservableJS can give that R cannot give?
+
+```{r}
+#| code-fold: true
+#| code-summary: "Sshh don't look"
+ojs_define(column_names = colnames(penguins |> select_if(is.numeric)))
+```
+
+```{ojs}
+viewof variable1 = Inputs.select([...column_names], {label: "X variable", value: "flipper_length_mm"})
+viewof variable2 = Inputs.select([...column_names], {label: "Y variable", value: "body_mass_g"})
+```
+
+```{ojs}
+Plot.plot({
+  marks: [
+      Plot.dot(penguins,
+         {x: variable1, // Notice the variable1 defined here is the same one we used in viewof
+          y: variable2, // Same goes here
+          fill: "species",
+          symbol: "species",
+          opacity: 0.7,
+          r: 4
+          })
+      ],
+  symbol: {legend: true},
+  facet: {data: penguins, x: "island"},
+  color: {
+    type: "categorical",
+    scheme: "Set1"
+  },
+  x: {label: "Flipper length (mm)"},
+  y: {label: "Body mass (g)"},
+  grid: true
+})
+```
+
+ObservableJS allows you to add interactivity with ObservablePlots easily. This normally would require you to have a Shiny server to code completely in R but with a few helpful resources you can create simple plots in ObservableJS with interactivity. 
+
+Yes, it is possible to run Shiny inside Quarto using server: shiny and execution contexts. But that requires to run two separate R sessions. Think about the environment, reduce your R sessions.
+
+What about tooltips?
+
+There are three ways ObservablePlot lets you play with pointers.
+
+```{ojs}
+viewof pointerMethod = Inputs.radio(["xy", "x", "y"], {label: "Pointer method"})
+```
+
+```{ojs}
+Plot.plot({
+    marks: [
+        Plot.lineY(industries, {
+            x: "date", y: "unemployed",
+            stroke: "industry", tip: pointerMethod
+        })
+    ]
+})
+```
+
+Let's say you want to pinpoint different points in the penguins dataset and wanted to talk about it.
+
+Easy peesy lemon squeezy
+
+```{ojs}
+Plot.plot({
+    marks: [
+        Plot.dot(
+            penguins,
+            Plot.pointer({x: variable1, y: variable2, fill: "pink", r: 8})
+        ),
+        Plot.dot(penguins, {x: variable1, y: variable2})
+    ]
+})
+```
+
+Finally one technical caveat!
+
+Currently you can't pass data from R to ObservableJS sadly.
+
+Buuuttt there's webR for that!
+
+```{ojs}
+viewof n_samples = Inputs.range([0, 10000], {step: 1, label: "Number of samples"})
+```
+
+
+```{ojs}
+//| code-fold: true
+//| code-summary: "webR Init stuff" 
+webR = {
+    let webbyR = await import('https://webr.r-wasm.org/latest/webr.mjs');
+    let webR = new webbyR.WebR();
+    await webR.init();
+    return(webR);
+}
+```
+
+```{ojs}
+random_sample = {
+    let result = await webR.evalR(
+        `rnorm(${n_samples})`);
+    console.log(result);
+    let output = await result.toArray();
+    console.log(output);
+    let series = output.map((i) => {return({x: i})});
+    console.log(series);
+    return(series)
+}
+console.log(random_sample)
+Plot.plot({
+    marks: [
+        Plot.rectY(random_sample, Plot.binX({y: "count"}, {x: "x", fill: "steelblue"}))
+    ]
+})
+```
+
+
+
