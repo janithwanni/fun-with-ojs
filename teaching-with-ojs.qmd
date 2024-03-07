@@ -13,7 +13,11 @@ ObservableJS is simply put Javascript with a couple of additions. Inside Quarto 
 2. Observable Inputs — Standard inputs controls including sliders, drop-downs, tables, check-boxes, etc.
 3. Observable Plot — High level plotting library for exploratory data visualization.
 
+# Let's start with penguins
+
 Let's start with a simple explanation of how to make a scatterplot with Observable and ObservablePlot.
+
+Let's say we have a dataset in R, called penguins
 
 ```{r}
 #| message: false
@@ -25,12 +29,13 @@ head(penguins)
 
 And now if we want to push data from R to ObservableJS we can,
 
-
 ```{r}
 ojs_define(penguins = penguins |> purrr::transpose())
 ```
 
 Why the `purrr::transpose()`? Well R stores dataframe as a list of columns in a data frame while Javascript (or ObservableJS) expects an Array of objects.
+
+You could do this using Javascript, but who needs that?
 
 ```{ojs}
 Plot.plot({
@@ -56,9 +61,16 @@ Plot.plot({
 })
 ```
 
+
+Looks complex? Yes but it's actually quite similar to how ggplot works.
+
+:::{.callout-tip}
 For more information about the similarities between ggplot and ObservablePlot go [here](https://observablehq.com/@observablehq/plot-from-ggplot2)
+:::
 
 But we can create this in ggplot as well I hear you say, what can ObservableJS can give that R cannot give?
+
+# Adding interactivity
 
 ```{r}
 #| code-fold: true
@@ -97,14 +109,16 @@ Plot.plot({
 
 ObservableJS allows you to add interactivity with ObservablePlots easily. This normally would require you to have a Shiny server to code completely in R but with a few helpful resources you can create simple plots in ObservableJS with interactivity. 
 
+:::{.callout-note}
 Yes, it is possible to run Shiny inside Quarto using server: shiny and execution contexts. But that requires to run two separate R sessions. Think about the environment, reduce your R sessions.
+:::
 
-What about tooltips?
+## What about tooltips?
 
 There are three ways ObservablePlot lets you play with pointers.
 
 ```{ojs}
-viewof pointerMethod = Inputs.radio(["xy", "x", "y"], {label: "Pointer method"})
+viewof pointerMethod = Inputs.radio(["xy", "x", "y"], {label: "Pointer method", value: "xy"})
 ```
 
 ```{ojs}
@@ -117,6 +131,8 @@ Plot.plot({
     ]
 })
 ```
+
+The difference comes in the dimensions that the tooltip focuses.
 
 Let's say you want to pinpoint different points in the penguins dataset and wanted to talk about it.
 
@@ -133,6 +149,8 @@ Plot.plot({
     ]
 })
 ```
+
+# The hard part
 
 Finally one technical caveat!
 
